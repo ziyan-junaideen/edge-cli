@@ -39,6 +39,8 @@ func NewRootCommand() *cobra.Command {
 	}
 
 	rootCommand.AddCommand(newAuthCommand(options))
+	rootCommand.AddCommand(newConsumerAddressesCommand(options))
+	rootCommand.AddCommand(newCustomersCommand(options))
 	rootCommand.AddCommand(newMerchantsCommand(options))
 	rootCommand.AddCommand(newProfilesCommand(options))
 

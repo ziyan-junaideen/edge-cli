@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 
+	"github.com/edgepayments/ept-cli/internal/edgeapi"
 	"github.com/edgepayments/ept-cli/internal/output"
 	"github.com/spf13/cobra"
 )
@@ -22,12 +23,12 @@ func newMerchantsCommand(options *globalOptions) *cobra.Command {
 				return err
 			}
 
-			merchants, rawData, err := client.ListMerchants(context.Background())
+			merchants, document, err := client.ListMerchants(context.Background(), edgeapi.QueryOptions{})
 			if err != nil {
 				return err
 			}
 			if options.jsonOutput {
-				return output.JSON(command.OutOrStdout(), rawData)
+				return output.JSON(command.OutOrStdout(), document)
 			}
 			return output.MerchantCollection(command.OutOrStdout(), merchants)
 		},
@@ -43,12 +44,12 @@ func newMerchantsCommand(options *globalOptions) *cobra.Command {
 				return err
 			}
 
-			merchant, rawData, err := client.ShowMerchant(context.Background(), args[0])
+			merchant, document, err := client.ShowMerchant(context.Background(), args[0], edgeapi.QueryOptions{})
 			if err != nil {
 				return err
 			}
 			if options.jsonOutput {
-				return output.JSON(command.OutOrStdout(), rawData)
+				return output.JSON(command.OutOrStdout(), document)
 			}
 			return output.Merchant(command.OutOrStdout(), merchant)
 		},

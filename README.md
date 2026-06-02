@@ -25,6 +25,7 @@ edge profiles set dev --api-url https://api.tryedge.test:4001/v2 --ca-cert /Volu
 edge profiles use dev
 edge auth login
 edge merchants list
+edge customers show <customer-id> --include addresses --json
 ```
 
 For a custom local host:
@@ -34,3 +35,19 @@ edge profiles set local-dashboard --api-url https://dashboard.tryedge.test:4001/
 ```
 
 Use `--insecure-skip-verify` only for local development endpoints.
+
+## Resources
+
+```sh
+edge merchants list
+edge merchants show <merchant-id>
+
+edge customers list
+edge customers show <customer-id> --include addresses
+edge customers show <customer-id> --preload addresses --json
+
+edge consumer-addresses list
+edge consumer-addresses show <address-id> --include customer
+```
+
+`--preload` is an alias for JSON:API `--include`. JSON output returns the full JSON:API document, including `included`, `links`, and `meta`.

@@ -36,6 +36,10 @@ type APIError struct {
 	Body       string
 }
 
+type QueryOptions struct {
+	Include []string
+}
+
 func New(config Config) (*Client, error) {
 	if strings.TrimSpace(config.Token) == "" {
 		return nil, errors.New("api token is required")
@@ -63,29 +67,74 @@ func New(config Config) (*Client, error) {
 	}, nil
 }
 
-func (client *Client) ListMerchants(ctx context.Context) ([]jsonapi.Resource, json.RawMessage, error) {
-	document, err := client.get(ctx, "merchants")
+func (client *Client) ListMerchants(ctx context.Context, options QueryOptions) ([]jsonapi.Resource, jsonapi.Document, error) {
+	document, err := client.get(ctx, "merchants", options)
 	if err != nil {
-		return nil, nil, err
+		return nil, jsonapi.Document{}, err
 	}
 
 	resources, err := jsonapi.DecodeResourceCollection(document.Data)
-	return resources, document.Data, err
+	return resources, document, err
 }
 
-func (client *Client) ShowMerchant(ctx context.Context, merchantID string) (jsonapi.Resource, json.RawMessage, error) {
-	document, err := client.get(ctx, "merchants/"+url.PathEscape(merchantID))
+func (client *Client) ShowMerchant(ctx context.Context, merchantID string, options QueryOptions) (jsonapi.Resource, jsonapi.Document, error) {
+	document, err := client.get(ctx, "merchants/"+url.PathEscape(merchantID), options)
 	if err != nil {
-		return jsonapi.Resource{}, nil, err
+		return jsonapi.Resource{}, jsonapi.Document{}, err
 	}
 
 	resource, err := jsonapi.DecodeResource(document.Data)
-	return resource, document.Data, err
+	return resource, document, err
 }
 
-func (client *Client) get(ctx context.Context, path string) (jsonapi.Document, error) {
+func (client *Client) ListCustomers(ctx context.Context, options QueryOptions) ([]jsonapi.Resource, jsonapi.Document, error) {
+	document, err := client.get(ctx, "customers", options)
+	if err != nil {
+		return nil, jsonapi.Document{}, err
+	}
+
+	resources, err := jsonapi.DecodeResourceCollection(document.Data)
+	return resources, document, err
+}
+
+func (client *Client) ShowCustomer(ctx context.Context, customerID string, options QueryOptions) (jsonapi.Resource, jsonapi.Document, error) {
+	document, err := client.get(ctx, "customers/"+url.PathEscape(customerID), options)
+	if err != nil {
+		return jsonapi.Resource{}, jsonapi.Document{}, err
+	}
+
+	resource, err := jsonapi.DecodeResource(document.Data)
+	return resource, document, err
+}
+
+func (client *Client) ListConsumerAddresses(ctx context.Context, options QueryOptions) ([]jsonapi.Resource, jsonapi.Document, error) {
+	document, err := client.get(ctx, "consumer_addresses", options)
+	if err != nil {
+		return nil, jsonapi.Document{}, err
+	}
+
+	resources, err := jsonapi.DecodeResourceCollection(document.Data)
+	return resources, document, err
+}
+
+func (client *Client) ShowConsumerAddress(ctx context.Context, consumerAddressID string, options QueryOptions) (jsonapi.Resource, jsonapi.Document, error) {
+	document, err := client.get(ctx, "consumer_addresses/"+url.PathEscape(consumerAddressID), options)
+	if err != nil {
+		return jsonapi.Resource{}, jsonapi.Document{}, err
+	}
+
+	resource, err := jsonapi.DecodeResource(document.Data)
+	return resource, document, err
+}
+
+func (client *Client) get(ctx context.Context, path string, options QueryOptions) (jsonapi.Document, error) {
 	requestURL := *client.baseURL
 	requestURL.Path = strings.TrimRight(client.baseURL.Path, "/") + "/" + strings.TrimLeft(path, "/")
+	query := requestURL.Query()
+	if len(options.Include) > 0 {
+		query.Set("include", strings.Join(options.Include, ","))
+	}
+	requestURL.RawQuery = query.Encode()
 
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL.String(), nil)
 	if err != nil {
