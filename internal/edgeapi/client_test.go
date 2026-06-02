@@ -64,3 +64,49 @@ func TestListCustomersSendsIncludeQuery(t *testing.T) {
 		t.Fatal("expected included data to be preserved")
 	}
 }
+
+func TestShowPaymentDemandSendsIncludeQuery(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(responseWriter http.ResponseWriter, request *http.Request) {
+		if request.URL.Path != "/v2/payment_demands/payment-demand-id" {
+			t.Fatalf("expected payment demand path, got %q", request.URL.Path)
+		}
+		if request.URL.Query().Get("include") != "payer,billing_address,payment_method" {
+			t.Fatalf("expected include query, got %q", request.URL.RawQuery)
+		}
+
+		responseWriter.Header().Set("Content-Type", "application/vnd.api+json")
+		_ = json.NewEncoder(responseWriter).Encode(map[string]any{
+			"data": map[string]any{
+				"id":   "payment-demand-id",
+				"type": "payment_demands",
+				"attributes": map[string]any{
+					"amount_cents":    1000,
+					"amount_currency": "USD",
+				},
+			},
+		})
+	}))
+	defer server.Close()
+
+	client, err := New(Config{
+		APIURL:             server.URL + "/v2",
+		Token:              "test-token",
+		InsecureSkipVerify: true,
+	})
+	if err != nil {
+		t.Fatalf("New returned error: %v", err)
+	}
+
+	paymentDemand, _, err := client.ShowPaymentDemand(
+		context.Background(),
+		"payment-demand-id",
+		QueryOptions{Include: []string{"payer", "billing_address", "payment_method"}},
+	)
+	if err != nil {
+		t.Fatalf("ShowPaymentDemand returned error: %v", err)
+	}
+
+	if paymentDemand.ID != "payment-demand-id" {
+		t.Fatalf("expected payment demand id, got %q", paymentDemand.ID)
+	}
+}

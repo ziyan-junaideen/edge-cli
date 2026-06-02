@@ -48,6 +48,18 @@ edge customers show <customer-id> --preload addresses --json
 
 edge consumer-addresses list
 edge consumer-addresses show <address-id> --include customer
+
+edge payment-demands list
+edge payment-demands show <payment-demand-id> --include payer,billing_address,payment_method
+
+edge payment-subscriptions list
+edge payment-subscriptions show <payment-subscription-id> --include payer,payment_method
+
+edge payment-methods list
+edge payment-methods show <payment-method-id> --include customer,address
+
+edge refund-demands list
+edge refund-demands show <refund-demand-id> --include payment_demand
 ```
 
 `--preload` is an alias for JSON:API `--include`. JSON output returns the full JSON:API document, including `included`, `links`, and `meta`.

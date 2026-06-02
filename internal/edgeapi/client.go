@@ -68,47 +68,63 @@ func New(config Config) (*Client, error) {
 }
 
 func (client *Client) ListMerchants(ctx context.Context, options QueryOptions) ([]jsonapi.Resource, jsonapi.Document, error) {
-	document, err := client.get(ctx, "merchants", options)
-	if err != nil {
-		return nil, jsonapi.Document{}, err
-	}
-
-	resources, err := jsonapi.DecodeResourceCollection(document.Data)
-	return resources, document, err
+	return client.listResources(ctx, "merchants", options)
 }
 
 func (client *Client) ShowMerchant(ctx context.Context, merchantID string, options QueryOptions) (jsonapi.Resource, jsonapi.Document, error) {
-	document, err := client.get(ctx, "merchants/"+url.PathEscape(merchantID), options)
-	if err != nil {
-		return jsonapi.Resource{}, jsonapi.Document{}, err
-	}
-
-	resource, err := jsonapi.DecodeResource(document.Data)
-	return resource, document, err
+	return client.showResource(ctx, "merchants", merchantID, options)
 }
 
 func (client *Client) ListCustomers(ctx context.Context, options QueryOptions) ([]jsonapi.Resource, jsonapi.Document, error) {
-	document, err := client.get(ctx, "customers", options)
-	if err != nil {
-		return nil, jsonapi.Document{}, err
-	}
-
-	resources, err := jsonapi.DecodeResourceCollection(document.Data)
-	return resources, document, err
+	return client.listResources(ctx, "customers", options)
 }
 
 func (client *Client) ShowCustomer(ctx context.Context, customerID string, options QueryOptions) (jsonapi.Resource, jsonapi.Document, error) {
-	document, err := client.get(ctx, "customers/"+url.PathEscape(customerID), options)
-	if err != nil {
-		return jsonapi.Resource{}, jsonapi.Document{}, err
-	}
-
-	resource, err := jsonapi.DecodeResource(document.Data)
-	return resource, document, err
+	return client.showResource(ctx, "customers", customerID, options)
 }
 
 func (client *Client) ListConsumerAddresses(ctx context.Context, options QueryOptions) ([]jsonapi.Resource, jsonapi.Document, error) {
-	document, err := client.get(ctx, "consumer_addresses", options)
+	return client.listResources(ctx, "consumer_addresses", options)
+}
+
+func (client *Client) ShowConsumerAddress(ctx context.Context, consumerAddressID string, options QueryOptions) (jsonapi.Resource, jsonapi.Document, error) {
+	return client.showResource(ctx, "consumer_addresses", consumerAddressID, options)
+}
+
+func (client *Client) ListPaymentDemands(ctx context.Context, options QueryOptions) ([]jsonapi.Resource, jsonapi.Document, error) {
+	return client.listResources(ctx, "payment_demands", options)
+}
+
+func (client *Client) ShowPaymentDemand(ctx context.Context, paymentDemandID string, options QueryOptions) (jsonapi.Resource, jsonapi.Document, error) {
+	return client.showResource(ctx, "payment_demands", paymentDemandID, options)
+}
+
+func (client *Client) ListPaymentSubscriptions(ctx context.Context, options QueryOptions) ([]jsonapi.Resource, jsonapi.Document, error) {
+	return client.listResources(ctx, "payment_subscriptions", options)
+}
+
+func (client *Client) ShowPaymentSubscription(ctx context.Context, paymentSubscriptionID string, options QueryOptions) (jsonapi.Resource, jsonapi.Document, error) {
+	return client.showResource(ctx, "payment_subscriptions", paymentSubscriptionID, options)
+}
+
+func (client *Client) ListPaymentMethods(ctx context.Context, options QueryOptions) ([]jsonapi.Resource, jsonapi.Document, error) {
+	return client.listResources(ctx, "payment_methods", options)
+}
+
+func (client *Client) ShowPaymentMethod(ctx context.Context, paymentMethodID string, options QueryOptions) (jsonapi.Resource, jsonapi.Document, error) {
+	return client.showResource(ctx, "payment_methods", paymentMethodID, options)
+}
+
+func (client *Client) ListRefundDemands(ctx context.Context, options QueryOptions) ([]jsonapi.Resource, jsonapi.Document, error) {
+	return client.listResources(ctx, "refund_demands", options)
+}
+
+func (client *Client) ShowRefundDemand(ctx context.Context, refundDemandID string, options QueryOptions) (jsonapi.Resource, jsonapi.Document, error) {
+	return client.showResource(ctx, "refund_demands", refundDemandID, options)
+}
+
+func (client *Client) listResources(ctx context.Context, path string, options QueryOptions) ([]jsonapi.Resource, jsonapi.Document, error) {
+	document, err := client.get(ctx, path, options)
 	if err != nil {
 		return nil, jsonapi.Document{}, err
 	}
@@ -117,8 +133,8 @@ func (client *Client) ListConsumerAddresses(ctx context.Context, options QueryOp
 	return resources, document, err
 }
 
-func (client *Client) ShowConsumerAddress(ctx context.Context, consumerAddressID string, options QueryOptions) (jsonapi.Resource, jsonapi.Document, error) {
-	document, err := client.get(ctx, "consumer_addresses/"+url.PathEscape(consumerAddressID), options)
+func (client *Client) showResource(ctx context.Context, path string, resourceID string, options QueryOptions) (jsonapi.Resource, jsonapi.Document, error) {
+	document, err := client.get(ctx, path+"/"+url.PathEscape(resourceID), options)
 	if err != nil {
 		return jsonapi.Resource{}, jsonapi.Document{}, err
 	}

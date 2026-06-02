@@ -19,6 +19,17 @@ type Resource struct {
 	Meta          json.RawMessage            `json:"meta,omitempty"`
 }
 
+type Relationship struct {
+	Data  json.RawMessage `json:"data,omitempty"`
+	Links json.RawMessage `json:"links,omitempty"`
+	Meta  json.RawMessage `json:"meta,omitempty"`
+}
+
+type ResourceIdentifier struct {
+	ID   string `json:"id"`
+	Type string `json:"type"`
+}
+
 type Error struct {
 	ID     string          `json:"id,omitempty"`
 	Status string          `json:"status,omitempty"`
@@ -39,4 +50,34 @@ func DecodeResourceCollection(data json.RawMessage) ([]Resource, error) {
 	var resources []Resource
 	err := json.Unmarshal(data, &resources)
 	return resources, err
+}
+
+func DecodeIncluded(data json.RawMessage) ([]Resource, error) {
+	if len(data) == 0 {
+		return nil, nil
+	}
+	return DecodeResourceCollection(data)
+}
+
+func DecodeRelationship(data json.RawMessage) (Relationship, error) {
+	var relationship Relationship
+	err := json.Unmarshal(data, &relationship)
+	return relationship, err
+}
+
+func DecodeResourceIdentifiers(data json.RawMessage) ([]ResourceIdentifier, error) {
+	if len(data) == 0 || string(data) == "null" {
+		return nil, nil
+	}
+
+	var identifiers []ResourceIdentifier
+	if err := json.Unmarshal(data, &identifiers); err == nil {
+		return identifiers, nil
+	}
+
+	var identifier ResourceIdentifier
+	if err := json.Unmarshal(data, &identifier); err != nil {
+		return nil, err
+	}
+	return []ResourceIdentifier{identifier}, nil
 }
