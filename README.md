@@ -60,6 +60,24 @@ edge payment-methods show <payment-method-id> --include customer,address
 
 edge refund-demands list
 edge refund-demands show <refund-demand-id> --include payment_demand
+
+edge account-alerts list
+edge account-alerts show <account-alert-id> --include red_flag
+
+edge accounts list
+edge accounts show <account-id> --include memberships
+
+edge memberships list
+edge memberships show <membership-id> --include account,permissions
+
+edge merchant-punitive-actions list
+edge merchant-punitive-actions show <action-id> --include merchant,red_flag
+
+edge permissions list
+edge permissions show <permission-id> --include merchant_tokens
+
+edge red-flags list
+edge red-flags show <red-flag-id> --include merchant
 ```
 
 `--preload` is an alias for JSON:API `--include`. JSON output returns the full JSON:API document, including `included`, `links`, and `meta`.

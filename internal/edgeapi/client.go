@@ -123,6 +123,54 @@ func (client *Client) ShowRefundDemand(ctx context.Context, refundDemandID strin
 	return client.showResource(ctx, "refund_demands", refundDemandID, options)
 }
 
+func (client *Client) ListAccountAlerts(ctx context.Context, options QueryOptions) ([]jsonapi.Resource, jsonapi.Document, error) {
+	return client.listResources(ctx, "account_alerts", options)
+}
+
+func (client *Client) ShowAccountAlert(ctx context.Context, accountAlertID string, options QueryOptions) (jsonapi.Resource, jsonapi.Document, error) {
+	return client.showResource(ctx, "account_alerts", accountAlertID, options)
+}
+
+func (client *Client) ListAccounts(ctx context.Context, options QueryOptions) ([]jsonapi.Resource, jsonapi.Document, error) {
+	return client.listResources(ctx, "accounts", options)
+}
+
+func (client *Client) ShowAccount(ctx context.Context, accountID string, options QueryOptions) (jsonapi.Resource, jsonapi.Document, error) {
+	return client.showResource(ctx, "accounts", accountID, options)
+}
+
+func (client *Client) ListMemberships(ctx context.Context, options QueryOptions) ([]jsonapi.Resource, jsonapi.Document, error) {
+	return client.listResources(ctx, "memberships", options)
+}
+
+func (client *Client) ShowMembership(ctx context.Context, membershipID string, options QueryOptions) (jsonapi.Resource, jsonapi.Document, error) {
+	return client.showResource(ctx, "memberships", membershipID, options)
+}
+
+func (client *Client) ListMerchantPunitiveActions(ctx context.Context, options QueryOptions) ([]jsonapi.Resource, jsonapi.Document, error) {
+	return client.listResources(ctx, "merchant_punitive_actions", options)
+}
+
+func (client *Client) ShowMerchantPunitiveAction(ctx context.Context, merchantPunitiveActionID string, options QueryOptions) (jsonapi.Resource, jsonapi.Document, error) {
+	return client.showResource(ctx, "merchant_punitive_actions", merchantPunitiveActionID, options)
+}
+
+func (client *Client) ListPermissions(ctx context.Context, options QueryOptions) ([]jsonapi.Resource, jsonapi.Document, error) {
+	return client.listResources(ctx, "permissions", options)
+}
+
+func (client *Client) ShowPermission(ctx context.Context, permissionID string, options QueryOptions) (jsonapi.Resource, jsonapi.Document, error) {
+	return client.showResource(ctx, "permissions", permissionID, options)
+}
+
+func (client *Client) ListRedFlags(ctx context.Context, options QueryOptions) ([]jsonapi.Resource, jsonapi.Document, error) {
+	return client.listResources(ctx, "red_flags", options)
+}
+
+func (client *Client) ShowRedFlag(ctx context.Context, redFlagID string, options QueryOptions) (jsonapi.Resource, jsonapi.Document, error) {
+	return client.showResource(ctx, "red_flags", redFlagID, options)
+}
+
 func (client *Client) listResources(ctx context.Context, path string, options QueryOptions) ([]jsonapi.Resource, jsonapi.Document, error) {
 	document, err := client.get(ctx, path, options)
 	if err != nil {

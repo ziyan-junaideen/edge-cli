@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"text/tabwriter"
 
@@ -88,10 +89,9 @@ func PaymentDemandCollection(writer io.Writer, paymentDemands []jsonapi.Resource
 	for _, paymentDemand := range paymentDemands {
 		if _, err := fmt.Fprintf(
 			table,
-			"%s\t%s %s\t%s\t%s\t%s\t%s\n",
+			"%s\t%s\t%s\t%s\t%s\t%s\n",
 			paymentDemand.ID,
-			attributeString(paymentDemand, "amount_cents"),
-			attributeString(paymentDemand, "amount_currency"),
+			moneyString(paymentDemand, "amount_cents", "amount_currency"),
 			firstAttributeString(paymentDemand, "state", "status"),
 			attributeString(paymentDemand, "processor_state"),
 			attributeString(paymentDemand, "succeeded_at"),
@@ -111,10 +111,9 @@ func PaymentSubscriptionCollection(writer io.Writer, paymentSubscriptions []json
 	for _, paymentSubscription := range paymentSubscriptions {
 		if _, err := fmt.Fprintf(
 			table,
-			"%s\t%s %s\t%s\t%s\t%s\n",
+			"%s\t%s\t%s\t%s\t%s\n",
 			paymentSubscription.ID,
-			attributeString(paymentSubscription, "amount_cents"),
-			attributeString(paymentSubscription, "amount_currency"),
+			moneyString(paymentSubscription, "amount_cents", "amount_currency"),
 			attributeString(paymentSubscription, "status"),
 			firstAttributeString(paymentSubscription, "billing_interval", "interval"),
 			attributeString(paymentSubscription, "created_at"),
@@ -156,13 +155,33 @@ func RefundDemandCollection(writer io.Writer, refundDemands []jsonapi.Resource) 
 	for _, refundDemand := range refundDemands {
 		if _, err := fmt.Fprintf(
 			table,
-			"%s\t%s %s\t%s\t%s\t%s\n",
+			"%s\t%s\t%s\t%s\t%s\n",
 			refundDemand.ID,
-			attributeString(refundDemand, "amount_cents"),
-			attributeString(refundDemand, "amount_currency"),
+			moneyString(refundDemand, "amount_cents", "amount_currency"),
 			attributeString(refundDemand, "state"),
 			attributeString(refundDemand, "reason"),
 			attributeString(refundDemand, "created_at"),
+		); err != nil {
+			return err
+		}
+	}
+	return table.Flush()
+}
+
+func UserResourceCollection(writer io.Writer, resources []jsonapi.Resource) error {
+	table := tabwriter.NewWriter(writer, 0, 0, 2, ' ', 0)
+	if _, err := fmt.Fprintln(table, "ID\tTYPE\tSUMMARY\tSTATUS\tCREATED"); err != nil {
+		return err
+	}
+	for _, resource := range resources {
+		if _, err := fmt.Fprintf(
+			table,
+			"%s\t%s\t%s\t%s\t%s\n",
+			resource.ID,
+			resource.Type,
+			userResourceSummary(resource),
+			firstAttributeString(resource, "status", "account_status", "action"),
+			attributeString(resource, "created_at"),
 		); err != nil {
 			return err
 		}
@@ -274,7 +293,7 @@ func PaymentDemand(writer io.Writer, paymentDemand jsonapi.Resource, document js
 		writer,
 		"ID: %s\n"+
 			"Type: %s\n"+
-			"Amount: %s %s\n"+
+			"Amount: %s\n"+
 			"State: %s\n"+
 			"Processor State: %s\n"+
 			"Capture Method: %s\n"+
@@ -284,8 +303,7 @@ func PaymentDemand(writer io.Writer, paymentDemand jsonapi.Resource, document js
 			"Updated: %s\n",
 		paymentDemand.ID,
 		paymentDemand.Type,
-		attributeString(paymentDemand, "amount_cents"),
-		attributeString(paymentDemand, "amount_currency"),
+		moneyString(paymentDemand, "amount_cents", "amount_currency"),
 		firstAttributeString(paymentDemand, "state", "status"),
 		attributeString(paymentDemand, "processor_state"),
 		attributeString(paymentDemand, "capture_method"),
@@ -313,7 +331,7 @@ func PaymentSubscription(writer io.Writer, paymentSubscription jsonapi.Resource,
 		writer,
 		"ID: %s\n"+
 			"Type: %s\n"+
-			"Amount: %s %s\n"+
+			"Amount: %s\n"+
 			"Status: %s\n"+
 			"Interval: %s\n"+
 			"Billing Cycle Anchor: %s\n"+
@@ -322,8 +340,7 @@ func PaymentSubscription(writer io.Writer, paymentSubscription jsonapi.Resource,
 			"Updated: %s\n",
 		paymentSubscription.ID,
 		paymentSubscription.Type,
-		attributeString(paymentSubscription, "amount_cents"),
-		attributeString(paymentSubscription, "amount_currency"),
+		moneyString(paymentSubscription, "amount_cents", "amount_currency"),
 		attributeString(paymentSubscription, "status"),
 		firstAttributeString(paymentSubscription, "billing_interval", "interval"),
 		firstAttributeString(paymentSubscription, "billing_cycle_anchor_at", "billing_anchor_at"),
@@ -382,21 +399,42 @@ func RefundDemand(writer io.Writer, refundDemand jsonapi.Resource) error {
 		writer,
 		"ID: %s\n"+
 			"Type: %s\n"+
-			"Amount: %s %s\n"+
+			"Amount: %s\n"+
 			"State: %s\n"+
 			"Reason: %s\n"+
 			"Created: %s\n"+
 			"Updated: %s\n",
 		refundDemand.ID,
 		refundDemand.Type,
-		attributeString(refundDemand, "amount_cents"),
-		attributeString(refundDemand, "amount_currency"),
+		moneyString(refundDemand, "amount_cents", "amount_currency"),
 		attributeString(refundDemand, "state"),
 		attributeString(refundDemand, "reason"),
 		attributeString(refundDemand, "created_at"),
 		attributeString(refundDemand, "updated_at"),
 	)
 	return err
+}
+
+func UserResource(writer io.Writer, resource jsonapi.Resource, document jsonapi.Document, includes []string) error {
+	if _, err := fmt.Fprintf(
+		writer,
+		"ID: %s\n"+
+			"Type: %s\n"+
+			"Summary: %s\n"+
+			"Status: %s\n"+
+			"Created: %s\n"+
+			"Updated: %s\n",
+		resource.ID,
+		resource.Type,
+		userResourceSummary(resource),
+		firstAttributeString(resource, "status", "account_status", "action"),
+		attributeString(resource, "created_at"),
+		attributeString(resource, "updated_at"),
+	); err != nil {
+		return err
+	}
+
+	return Relationships(writer, resource, document, relationshipNames(includes, defaultRelationshipNames(resource.Type)))
 }
 
 func attributeString(resource jsonapi.Resource, name string) string {
@@ -416,6 +454,49 @@ func attributeString(resource jsonapi.Resource, name string) string {
 	}
 
 	return ""
+}
+
+func moneyString(resource jsonapi.Resource, centsAttribute string, currencyAttribute string) string {
+	currency := attributeString(resource, currencyAttribute)
+	cents := attributeString(resource, centsAttribute)
+	if cents == "" {
+		return strings.TrimSpace(currency)
+	}
+
+	minorUnits, err := strconv.ParseInt(cents, 10, 64)
+	if err != nil {
+		return strings.TrimSpace(cents + " " + currency)
+	}
+
+	decimals := currencyDecimals(currency)
+	if decimals == 0 {
+		return strings.TrimSpace(fmt.Sprintf("%d %s", minorUnits, currency))
+	}
+
+	divisor := int64(1)
+	for index := 0; index < decimals; index++ {
+		divisor *= 10
+	}
+
+	sign := ""
+	if minorUnits < 0 {
+		sign = "-"
+		minorUnits = -minorUnits
+	}
+
+	major := minorUnits / divisor
+	minor := minorUnits % divisor
+	amount := fmt.Sprintf("%s%d.%0*d", sign, major, decimals, minor)
+	return strings.TrimSpace(amount + " " + currency)
+}
+
+func currencyDecimals(currency string) int {
+	switch strings.ToUpper(strings.TrimSpace(currency)) {
+	case "BIF", "CLP", "DJF", "GNF", "JPY", "KMF", "KRW", "MGA", "PYG", "RWF", "UGX", "VND", "VUV", "XAF", "XOF", "XPF":
+		return 0
+	default:
+		return 2
+	}
 }
 
 func firstAttributeString(resource jsonapi.Resource, names ...string) string {
@@ -522,12 +603,96 @@ func summarizeResource(resource jsonapi.Resource) string {
 		})
 	case "payment_demands":
 		return compactSummary(resource.ID, []string{
-			attributeString(resource, "amount_cents") + " " + attributeString(resource, "amount_currency"),
+			moneyString(resource, "amount_cents", "amount_currency"),
 			firstAttributeString(resource, "state", "status"),
 			attributeString(resource, "processor_state"),
 		})
+	case "accounts":
+		return compactSummary(resource.ID, []string{
+			attributeString(resource, "name"),
+			attributeString(resource, "email"),
+			attributeString(resource, "account_status"),
+		})
+	case "memberships":
+		return compactSummary(resource.ID, []string{
+			"opener " + attributeString(resource, "opener"),
+		})
+	case "permissions":
+		return compactSummary(resource.ID, []string{
+			attributeString(resource, "slug"),
+			attributeString(resource, "description"),
+		})
+	case "red_flags":
+		return compactSummary(resource.ID, []string{
+			attributeString(resource, "violation"),
+			attributeString(resource, "source"),
+			attributeString(resource, "status"),
+		})
+	case "account_alerts":
+		return compactSummary(resource.ID, []string{
+			attributeString(resource, "status"),
+			"acknowledged " + attributeString(resource, "acknowledged_at"),
+		})
+	case "merchant_punitive_actions":
+		return compactSummary(resource.ID, []string{
+			attributeString(resource, "action"),
+		})
 	default:
 		return resource.Type + " " + resource.ID
+	}
+}
+
+func userResourceSummary(resource jsonapi.Resource) string {
+	switch resource.Type {
+	case "account_alerts":
+		return compactSummary("", []string{
+			attributeString(resource, "status"),
+			"acknowledged " + attributeString(resource, "acknowledged_at"),
+		})
+	case "accounts":
+		return compactSummary("", []string{
+			attributeString(resource, "name"),
+			attributeString(resource, "email"),
+			attributeString(resource, "account_status"),
+		})
+	case "memberships":
+		return compactSummary("", []string{
+			"opener " + attributeString(resource, "opener"),
+		})
+	case "merchant_punitive_actions":
+		return attributeString(resource, "action")
+	case "permissions":
+		return compactSummary("", []string{
+			attributeString(resource, "slug"),
+			attributeString(resource, "description"),
+		})
+	case "red_flags":
+		return compactSummary("", []string{
+			attributeString(resource, "violation"),
+			attributeString(resource, "source"),
+			attributeString(resource, "comment"),
+		})
+	default:
+		return summarizeResource(resource)
+	}
+}
+
+func defaultRelationshipNames(resourceType string) []string {
+	switch resourceType {
+	case "account_alerts":
+		return []string{"merchant", "red_flag"}
+	case "accounts":
+		return []string{"memberships", "personal_identification"}
+	case "memberships":
+		return []string{"account", "merchant", "permissions"}
+	case "merchant_punitive_actions":
+		return []string{"merchant", "red_flag"}
+	case "permissions":
+		return []string{"merchant_tokens"}
+	case "red_flags":
+		return []string{"merchant"}
+	default:
+		return nil
 	}
 }
 
@@ -542,6 +707,9 @@ func compactSummary(resourceID string, parts []string) string {
 	}
 	if len(nonEmptyParts) == 0 {
 		return resourceID
+	}
+	if resourceID == "" {
+		return strings.Join(nonEmptyParts, ", ")
 	}
 	return resourceID + " (" + strings.Join(nonEmptyParts, ", ") + ")"
 }

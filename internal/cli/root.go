@@ -39,13 +39,19 @@ func NewRootCommand() *cobra.Command {
 	}
 
 	rootCommand.AddCommand(newAuthCommand(options))
+	rootCommand.AddCommand(newAccountAlertsCommand(options))
+	rootCommand.AddCommand(newAccountsCommand(options))
 	rootCommand.AddCommand(newConsumerAddressesCommand(options))
 	rootCommand.AddCommand(newCustomersCommand(options))
+	rootCommand.AddCommand(newMembershipsCommand(options))
 	rootCommand.AddCommand(newMerchantsCommand(options))
+	rootCommand.AddCommand(newMerchantPunitiveActionsCommand(options))
 	rootCommand.AddCommand(newPaymentDemandsCommand(options))
 	rootCommand.AddCommand(newPaymentMethodsCommand(options))
 	rootCommand.AddCommand(newPaymentSubscriptionsCommand(options))
+	rootCommand.AddCommand(newPermissionsCommand(options))
 	rootCommand.AddCommand(newProfilesCommand(options))
+	rootCommand.AddCommand(newRedFlagsCommand(options))
 	rootCommand.AddCommand(newRefundDemandsCommand(options))
 
 	rootCommand.SetOut(os.Stdout)
