@@ -233,22 +233,34 @@ func (client *Client) get(ctx context.Context, path string, options QueryOptions
 }
 
 func (apiError APIError) Error() string {
+	prefix := fmt.Sprintf("api request failed: %d %s", apiError.StatusCode, http.StatusText(apiError.StatusCode))
 	if len(apiError.Errors) == 0 {
-		return fmt.Sprintf("api request failed with status %d", apiError.StatusCode)
+		if strings.TrimSpace(apiError.Body) == "" {
+			return prefix
+		}
+		return prefix + ": " + strings.TrimSpace(apiError.Body)
 	}
 
-	firstError := apiError.Errors[0]
-	message := firstError.Detail
-	if message == "" {
-		message = firstError.Title
+	messages := []string{}
+	for _, responseError := range apiError.Errors {
+		messageParts := []string{}
+		if responseError.Code != "" {
+			messageParts = append(messageParts, responseError.Code)
+		}
+		if responseError.Title != "" {
+			messageParts = append(messageParts, responseError.Title)
+		}
+		if responseError.Detail != "" {
+			messageParts = append(messageParts, responseError.Detail)
+		}
+		if len(messageParts) > 0 {
+			messages = append(messages, strings.Join(messageParts, ": "))
+		}
 	}
-	if message == "" {
-		message = firstError.Code
+	if len(messages) == 0 {
+		return prefix
 	}
-	if message == "" {
-		message = fmt.Sprintf("api request failed with status %d", apiError.StatusCode)
-	}
-	return message
+	return prefix + ": " + strings.Join(messages, "; ")
 }
 
 func tlsClientConfig(config Config) (*tls.Config, error) {

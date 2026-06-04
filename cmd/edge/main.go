@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/edgepayments/ept-cli/internal/cli"
@@ -8,6 +9,7 @@ import (
 
 func main() {
 	if err := cli.NewRootCommand().Execute(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }

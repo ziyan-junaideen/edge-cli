@@ -67,7 +67,7 @@ func newCustomersCommand(options *globalOptions) *cobra.Command {
 			if options.jsonOutput {
 				return output.JSON(command.OutOrStdout(), document)
 			}
-			return output.Customer(command.OutOrStdout(), customer)
+			return output.ShowResource(command.OutOrStdout(), customer, document, includes)
 		},
 	}
 

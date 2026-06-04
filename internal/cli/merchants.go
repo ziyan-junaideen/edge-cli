@@ -51,7 +51,7 @@ func newMerchantsCommand(options *globalOptions) *cobra.Command {
 			if options.jsonOutput {
 				return output.JSON(command.OutOrStdout(), document)
 			}
-			return output.Merchant(command.OutOrStdout(), merchant)
+			return output.ShowResource(command.OutOrStdout(), merchant, document, nil)
 		},
 	}
 

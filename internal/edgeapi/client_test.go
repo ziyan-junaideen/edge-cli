@@ -4,8 +4,10 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -108,5 +110,80 @@ func TestShowPaymentDemandSendsIncludeQuery(t *testing.T) {
 
 	if paymentDemand.ID != "payment-demand-id" {
 		t.Fatalf("expected payment demand id, got %q", paymentDemand.ID)
+	}
+}
+
+func TestAPIErrorFormatsForbiddenJSONAPIError(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(responseWriter http.ResponseWriter, request *http.Request) {
+		responseWriter.WriteHeader(http.StatusForbidden)
+		_ = json.NewEncoder(responseWriter).Encode(map[string]any{
+			"errors": []map[string]any{
+				{
+					"status": "403",
+					"code":   "forbidden",
+					"title":  "Forbidden",
+					"detail": "Token does not have permission to access payment_demands.",
+				},
+			},
+		})
+	}))
+	defer server.Close()
+
+	client, err := New(Config{
+		APIURL:             server.URL + "/v2",
+		Token:              "test-token",
+		InsecureSkipVerify: true,
+	})
+	if err != nil {
+		t.Fatalf("New returned error: %v", err)
+	}
+
+	_, _, err = client.ListPaymentDemands(context.Background(), QueryOptions{})
+	if err == nil {
+		t.Fatal("expected API error")
+	}
+
+	var apiError APIError
+	if !errors.As(err, &apiError) {
+		t.Fatalf("expected APIError, got %T", err)
+	}
+	if apiError.StatusCode != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", apiError.StatusCode)
+	}
+
+	errorMessage := err.Error()
+	for _, expected := range []string{"403 Forbidden", "forbidden", "Token does not have permission"} {
+		if !strings.Contains(errorMessage, expected) {
+			t.Fatalf("expected error message to contain %q, got %q", expected, errorMessage)
+		}
+	}
+}
+
+func TestAPIErrorIncludesPlainTextBody(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(responseWriter http.ResponseWriter, request *http.Request) {
+		responseWriter.WriteHeader(http.StatusBadGateway)
+		_, _ = responseWriter.Write([]byte("upstream unavailable"))
+	}))
+	defer server.Close()
+
+	client, err := New(Config{
+		APIURL:             server.URL + "/v2",
+		Token:              "test-token",
+		InsecureSkipVerify: true,
+	})
+	if err != nil {
+		t.Fatalf("New returned error: %v", err)
+	}
+
+	_, _, err = client.ListPaymentDemands(context.Background(), QueryOptions{})
+	if err == nil {
+		t.Fatal("expected API error")
+	}
+
+	errorMessage := err.Error()
+	for _, expected := range []string{"502 Bad Gateway", "upstream unavailable"} {
+		if !strings.Contains(errorMessage, expected) {
+			t.Fatalf("expected error message to contain %q, got %q", expected, errorMessage)
+		}
 	}
 }

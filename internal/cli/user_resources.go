@@ -119,7 +119,7 @@ func newUserResourceCommand(options *globalOptions, definition resourceCommandDe
 		return output.UserResourceCollection(command.OutOrStdout(), resources)
 	}
 	definition.RenderMember = func(command *cobra.Command, resource jsonapi.Resource, document jsonapi.Document, includes []string) error {
-		return output.UserResource(command.OutOrStdout(), resource, document, includes)
+		return output.ShowResource(command.OutOrStdout(), resource, document, includes)
 	}
 	return newReadOnlyResourceCommand(options, definition)
 }

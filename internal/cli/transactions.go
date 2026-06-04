@@ -36,7 +36,7 @@ func newPaymentDemandsCommand(options *globalOptions) *cobra.Command {
 			return output.PaymentDemandCollection(command.OutOrStdout(), resources)
 		},
 		RenderMember: func(command *cobra.Command, resource jsonapi.Resource, document jsonapi.Document, includes []string) error {
-			return output.PaymentDemand(command.OutOrStdout(), resource, document, includes)
+			return output.ShowResource(command.OutOrStdout(), resource, document, includes)
 		},
 	})
 }
@@ -68,7 +68,7 @@ func newPaymentSubscriptionsCommand(options *globalOptions) *cobra.Command {
 			return output.PaymentSubscriptionCollection(command.OutOrStdout(), resources)
 		},
 		RenderMember: func(command *cobra.Command, resource jsonapi.Resource, document jsonapi.Document, includes []string) error {
-			return output.PaymentSubscription(command.OutOrStdout(), resource, document, includes)
+			return output.ShowResource(command.OutOrStdout(), resource, document, includes)
 		},
 	})
 }
@@ -92,7 +92,7 @@ func newPaymentMethodsCommand(options *globalOptions) *cobra.Command {
 			return output.PaymentMethodCollection(command.OutOrStdout(), resources)
 		},
 		RenderMember: func(command *cobra.Command, resource jsonapi.Resource, document jsonapi.Document, includes []string) error {
-			return output.PaymentMethod(command.OutOrStdout(), resource)
+			return output.ShowResource(command.OutOrStdout(), resource, document, includes)
 		},
 	})
 }
@@ -116,7 +116,7 @@ func newRefundDemandsCommand(options *globalOptions) *cobra.Command {
 			return output.RefundDemandCollection(command.OutOrStdout(), resources)
 		},
 		RenderMember: func(command *cobra.Command, resource jsonapi.Resource, document jsonapi.Document, includes []string) error {
-			return output.RefundDemand(command.OutOrStdout(), resource)
+			return output.ShowResource(command.OutOrStdout(), resource, document, includes)
 		},
 	})
 }

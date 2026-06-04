@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"sort"
 	"strconv"
 	"strings"
 	"text/tabwriter"
@@ -189,6 +190,40 @@ func UserResourceCollection(writer io.Writer, resources []jsonapi.Resource) erro
 	return table.Flush()
 }
 
+func ShowResource(writer io.Writer, resource jsonapi.Resource, document jsonapi.Document, includes []string) error {
+	if err := resourceDetails(writer, resource, document, includes); err != nil {
+		return err
+	}
+	if err := RelationshipIdentifiers(writer, resource); err != nil {
+		return err
+	}
+	return IncludedResources(writer, resource, document, relationshipNames(includes, defaultRelationshipNames(resource.Type)))
+}
+
+func resourceDetails(writer io.Writer, resource jsonapi.Resource, document jsonapi.Document, includes []string) error {
+	switch resource.Type {
+	case "merchants":
+		return Merchant(writer, resource)
+	case "customers":
+		return Customer(writer, resource)
+	case "consumer_addresses":
+		return ConsumerAddress(writer, resource)
+	case "payment_demands":
+		return PaymentDemand(writer, resource, jsonapi.Document{}, nil)
+	case "payment_subscriptions":
+		return PaymentSubscription(writer, resource, jsonapi.Document{}, nil)
+	case "payment_methods":
+		return PaymentMethod(writer, resource)
+	case "refund_demands":
+		return RefundDemand(writer, resource)
+	case "account_alerts", "accounts", "memberships", "merchant_punitive_actions", "permissions", "red_flags":
+		return UserResource(writer, resource, jsonapi.Document{}, nil)
+	default:
+		_, err := fmt.Fprintf(writer, "ID: %s\nType: %s\n", resource.ID, resource.Type)
+		return err
+	}
+}
+
 func Merchant(writer io.Writer, merchant jsonapi.Resource) error {
 	_, err := fmt.Fprintf(
 		writer,
@@ -331,23 +366,65 @@ func PaymentSubscription(writer io.Writer, paymentSubscription jsonapi.Resource,
 		writer,
 		"ID: %s\n"+
 			"Type: %s\n"+
+			"Description: %s\n"+
+			"Slug: %s\n"+
 			"Amount: %s\n"+
+			"Discount: %s\n"+
+			"Fee: %s\n"+
 			"Status: %s\n"+
-			"Interval: %s\n"+
+			"Billing Period: %s\n"+
 			"Billing Cycle Anchor: %s\n"+
+			"Proration Behavior: %s\n"+
+			"Purchase Reference: %s\n"+
+			"Purchase Kind: %s\n"+
+			"Payer Timezone: %s\n"+
+			"Idempotency Key: %s\n"+
 			"Email Receipt: %s\n"+
+			"CVC2 Check: %s\n"+
+			"Address Line 1 Verification: %s\n"+
+			"Postal Code Verification: %s\n"+
+			"3DS Version: %s\n"+
+			"3DS Status: %s\n"+
+			"3DS Cryptogram: %s\n"+
+			"ECI: %s\n"+
+			"Directory Transaction EID: %s\n"+
+			"ACS Transaction EID: %s\n"+
+			"Canceled At: %s\n"+
 			"Created: %s\n"+
 			"Updated: %s\n",
 		paymentSubscription.ID,
 		paymentSubscription.Type,
+		attributeString(paymentSubscription, "description"),
+		attributeString(paymentSubscription, "slug"),
 		moneyString(paymentSubscription, "amount_cents", "amount_currency"),
+		moneyAttributeString(paymentSubscription, "discount_cents", "amount_currency"),
+		moneyAttributeString(paymentSubscription, "fee_cents", "amount_currency"),
 		attributeString(paymentSubscription, "status"),
-		firstAttributeString(paymentSubscription, "billing_interval", "interval"),
+		firstAttributeString(paymentSubscription, "billing_period", "billing_interval", "interval"),
 		firstAttributeString(paymentSubscription, "billing_cycle_anchor_at", "billing_anchor_at"),
+		attributeString(paymentSubscription, "proration_behavior"),
+		attributeString(paymentSubscription, "purchase_reference"),
+		attributeString(paymentSubscription, "purchase_kind"),
+		attributeString(paymentSubscription, "payer_timezone"),
+		attributeString(paymentSubscription, "idempotency_key"),
 		attributeString(paymentSubscription, "email_receipt"),
+		attributeString(paymentSubscription, "cvc2_check"),
+		attributeString(paymentSubscription, "address_line1_verification"),
+		attributeString(paymentSubscription, "postal_code_verification"),
+		attributeString(paymentSubscription, "threeds_version"),
+		attributeString(paymentSubscription, "threeds_status"),
+		attributeString(paymentSubscription, "threeds_cryptogram"),
+		attributeString(paymentSubscription, "eci"),
+		attributeString(paymentSubscription, "directory_transaction_eid"),
+		attributeString(paymentSubscription, "acs_transaction_eid"),
+		attributeString(paymentSubscription, "canceled_at"),
 		attributeString(paymentSubscription, "created_at"),
 		attributeString(paymentSubscription, "updated_at"),
 	); err != nil {
+		return err
+	}
+
+	if err := LineItems(writer, paymentSubscription); err != nil {
 		return err
 	}
 
@@ -457,6 +534,10 @@ func attributeString(resource jsonapi.Resource, name string) string {
 }
 
 func moneyString(resource jsonapi.Resource, centsAttribute string, currencyAttribute string) string {
+	return moneyAttributeString(resource, centsAttribute, currencyAttribute)
+}
+
+func moneyAttributeString(resource jsonapi.Resource, centsAttribute string, currencyAttribute string) string {
 	currency := attributeString(resource, currencyAttribute)
 	cents := attributeString(resource, centsAttribute)
 	if cents == "" {
@@ -509,6 +590,75 @@ func firstAttributeString(resource jsonapi.Resource, names ...string) string {
 	return ""
 }
 
+func LineItems(writer io.Writer, resource jsonapi.Resource) error {
+	rawLineItems, ok := resource.Attributes["line_items"]
+	if !ok || len(rawLineItems) == 0 || string(rawLineItems) == "null" {
+		return nil
+	}
+
+	var lineItems []map[string]json.RawMessage
+	if err := json.Unmarshal(rawLineItems, &lineItems); err != nil {
+		return err
+	}
+	if len(lineItems) == 0 {
+		return nil
+	}
+
+	if _, err := fmt.Fprintln(writer, "\nLine Items:"); err != nil {
+		return err
+	}
+	table := tabwriter.NewWriter(writer, 0, 0, 2, ' ', 0)
+	if _, err := fmt.Fprintln(table, "NAME\tQTY\tAMOUNT\tTAX\tDISCOUNT\tSKU\tDESCRIPTION"); err != nil {
+		return err
+	}
+
+	for _, lineItem := range lineItems {
+		if _, err := fmt.Fprintf(
+			table,
+			"%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
+			rawString(lineItem, "name"),
+			rawString(lineItem, "quantity"),
+			rawMoney(lineItem, "amount_cents", "amount_currency"),
+			rawMoney(lineItem, "tax_cents", "tax_currency"),
+			rawMoney(lineItem, "discount_cents", "discount_currency"),
+			rawString(lineItem, "sku"),
+			rawString(lineItem, "description"),
+		); err != nil {
+			return err
+		}
+	}
+
+	return table.Flush()
+}
+
+func rawString(values map[string]json.RawMessage, name string) string {
+	rawValue, ok := values[name]
+	if !ok || len(rawValue) == 0 || string(rawValue) == "null" {
+		return ""
+	}
+
+	var stringValue string
+	if err := json.Unmarshal(rawValue, &stringValue); err == nil {
+		return stringValue
+	}
+
+	var anyValue any
+	if err := json.Unmarshal(rawValue, &anyValue); err == nil && anyValue != nil {
+		return fmt.Sprint(anyValue)
+	}
+
+	return ""
+}
+
+func rawMoney(values map[string]json.RawMessage, centsAttribute string, currencyAttribute string) string {
+	return moneyAttributeString(jsonapi.Resource{
+		Attributes: map[string]json.RawMessage{
+			centsAttribute:    values[centsAttribute],
+			currencyAttribute: values[currencyAttribute],
+		},
+	}, centsAttribute, currencyAttribute)
+}
+
 func relationshipNames(includes []string, defaultNames []string) []string {
 	if len(includes) == 0 {
 		return defaultNames
@@ -517,6 +667,57 @@ func relationshipNames(includes []string, defaultNames []string) []string {
 }
 
 func Relationships(writer io.Writer, resource jsonapi.Resource, document jsonapi.Document, relationshipNames []string) error {
+	return IncludedResources(writer, resource, document, relationshipNames)
+}
+
+func RelationshipIdentifiers(writer io.Writer, resource jsonapi.Resource) error {
+	if len(resource.Relationships) == 0 {
+		return nil
+	}
+
+	table := tabwriter.NewWriter(writer, 0, 0, 2, ' ', 0)
+	if _, err := fmt.Fprintln(writer, "\nRelationships:"); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintln(table, "RELATION\tRESOURCE"); err != nil {
+		return err
+	}
+
+	relationshipNames := make([]string, 0, len(resource.Relationships))
+	for relationshipName := range resource.Relationships {
+		relationshipNames = append(relationshipNames, relationshipName)
+	}
+	sort.Strings(relationshipNames)
+
+	for _, relationshipName := range relationshipNames {
+		rawRelationship := resource.Relationships[relationshipName]
+		relationship, err := jsonapi.DecodeRelationship(rawRelationship)
+		if err != nil {
+			return err
+		}
+		identifiers, err := jsonapi.DecodeResourceIdentifiers(relationship.Data)
+		if err != nil {
+			return err
+		}
+		if len(identifiers) == 0 {
+			continue
+		}
+
+		for index, identifier := range identifiers {
+			relationLabel := ""
+			if index == 0 {
+				relationLabel = titleize(relationshipName)
+			}
+			if _, err := fmt.Fprintf(table, "%s\t%s %s\n", relationLabel, identifier.Type, identifier.ID); err != nil {
+				return err
+			}
+		}
+	}
+
+	return table.Flush()
+}
+
+func IncludedResources(writer io.Writer, resource jsonapi.Resource, document jsonapi.Document, relationshipNames []string) error {
 	includedResources, err := jsonapi.DecodeIncluded(document.Included)
 	if err != nil {
 		return err
@@ -560,7 +761,10 @@ func Relationships(writer io.Writer, resource jsonapi.Resource, document jsonapi
 				}
 				printedHeader = true
 			}
-			if _, err := fmt.Fprintf(writer, "%s: %s\n", titleize(relationshipName), summarizeResource(includedResource)); err != nil {
+			if _, err := fmt.Fprintf(writer, "\n%s:\n", titleize(relationshipName)); err != nil {
+				return err
+			}
+			if err := resourceDetails(writer, includedResource, jsonapi.Document{}, nil); err != nil {
 				return err
 			}
 		}

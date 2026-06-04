@@ -68,7 +68,7 @@ func newConsumerAddressesCommand(options *globalOptions) *cobra.Command {
 			if options.jsonOutput {
 				return output.JSON(command.OutOrStdout(), document)
 			}
-			return output.ConsumerAddress(command.OutOrStdout(), consumerAddress)
+			return output.ShowResource(command.OutOrStdout(), consumerAddress, document, includes)
 		},
 	}
 
