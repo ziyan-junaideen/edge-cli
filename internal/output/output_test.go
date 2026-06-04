@@ -41,6 +41,75 @@ func TestPaymentDemandCollectionFormatsAmount(t *testing.T) {
 	}
 }
 
+func TestPaymentDemandShowsExpandedAttributesAndLineItems(t *testing.T) {
+	var buffer bytes.Buffer
+	paymentDemand := resourceWithAttributes(t, map[string]any{
+		"description":                "Test charge",
+		"amount_cents":               10000,
+		"amount_currency":            "USD",
+		"discount_cents":             250,
+		"fee_cents":                  53,
+		"processor_state":            "succeeded",
+		"capture_method":             "automatic",
+		"purchase_reference":         "00000001",
+		"purchase_kind":              "order",
+		"payer_timezone":             "Asia/Colombo",
+		"idempotency_key":            "idempotency-key",
+		"email_receipt":              true,
+		"cvc2_check":                 "match",
+		"address_line1_verification": "match",
+		"postal_code_verification":   "match",
+		"threeds_version":            "2.2.0",
+		"threeds_status":             "Y",
+		"threeds_cryptogram":         "cryptogram",
+		"eci":                        "05",
+		"directory_transaction_eid":  "directory-id",
+		"acs_transaction_eid":        "acs-id",
+		"succeeded_at":               "2026-06-01T17:27:43Z",
+		"created_at":                 "2026-06-01T17:27:18Z",
+		"updated_at":                 "2026-06-01T17:27:43Z",
+		"line_items": []map[string]any{
+			{
+				"name":              "Widget",
+				"description":       "A standard widget",
+				"amount_cents":      10000,
+				"amount_currency":   "USD",
+				"quantity":          1,
+				"tax_cents":         825,
+				"tax_currency":      "USD",
+				"discount_cents":    250,
+				"discount_currency": "USD",
+			},
+		},
+	})
+	paymentDemand.ID = "payment-demand-id"
+	paymentDemand.Type = "payment_demands"
+
+	if err := PaymentDemand(&buffer, paymentDemand, jsonapi.Document{}, nil); err != nil {
+		t.Fatalf("PaymentDemand returned error: %v", err)
+	}
+
+	output := buffer.String()
+	for _, expected := range []string{
+		"Description: Test charge",
+		"Amount: 100.00 USD",
+		"Discount: 2.50 USD",
+		"Fee: 0.53 USD",
+		"Purchase Reference: 00000001",
+		"Payer Timezone: Asia/Colombo",
+		"Idempotency Key: idempotency-key",
+		"CVC2 Check: match",
+		"3DS Version: 2.2.0",
+		"Line Items:",
+		"Widget",
+		"8.25 USD",
+	} {
+		if !strings.Contains(output, expected) {
+			t.Fatalf("expected output to contain %q, got:\n%s", expected, output)
+		}
+	}
+}
+
 func TestShowResourcePrintsRelationshipIDsAndIncludedDetails(t *testing.T) {
 	var buffer bytes.Buffer
 	paymentDemand := resourceWithAttributes(t, map[string]any{
@@ -94,6 +163,72 @@ func TestShowResourcePrintsRelationshipIDsAndIncludedDetails(t *testing.T) {
 		if !strings.Contains(output, expected) {
 			t.Fatalf("expected output to contain %q, got:\n%s", expected, output)
 		}
+	}
+}
+
+func TestShowResourceSkipsRelationshipSectionWhenNoRelationshipIDs(t *testing.T) {
+	var buffer bytes.Buffer
+	merchant := resourceWithAttributes(t, map[string]any{
+		"business_name": "Edge",
+	})
+	merchant.ID = "merchant-id"
+	merchant.Type = "merchants"
+	merchant.Relationships = map[string]json.RawMessage{
+		"customers": mustMarshal(t, map[string]any{
+			"links": map[string]any{"self": "https://example.test/relationships/customers"},
+		}),
+	}
+
+	if err := ShowResource(&buffer, merchant, jsonapi.Document{}, nil); err != nil {
+		t.Fatalf("ShowResource returned error: %v", err)
+	}
+
+	if strings.Contains(buffer.String(), "Relationships:") {
+		t.Fatalf("expected no empty relationship section, got:\n%s", buffer.String())
+	}
+}
+
+func TestPaymentMethodDoesNotRenderEmptyExpirySlash(t *testing.T) {
+	var buffer bytes.Buffer
+	paymentMethod := resourceWithAttributes(t, map[string]any{
+		"kind":           "visa",
+		"last_four":      "0004",
+		"card_pan_token": "pan-token",
+		"card_cvv_token": "cvv-token",
+		"external_state": "confirmed",
+	})
+	paymentMethod.ID = "payment-method-id"
+	paymentMethod.Type = "payment_methods"
+
+	if err := PaymentMethod(&buffer, paymentMethod); err != nil {
+		t.Fatalf("PaymentMethod returned error: %v", err)
+	}
+
+	if strings.Contains(buffer.String(), "Expiry: /") {
+		t.Fatalf("expected empty expiry not to render as slash, got:\n%s", buffer.String())
+	}
+	for _, expected := range []string{"Card PAN Token: pan-token", "Card CVV Token: cvv-token"} {
+		if !strings.Contains(buffer.String(), expected) {
+			t.Fatalf("expected token field %q in output, got:\n%s", expected, buffer.String())
+		}
+	}
+}
+
+func TestPaymentMethodRendersExpiryWhenPresent(t *testing.T) {
+	var buffer bytes.Buffer
+	paymentMethod := resourceWithAttributes(t, map[string]any{
+		"expiry_month": 12,
+		"expiry_year":  2030,
+	})
+	paymentMethod.ID = "payment-method-id"
+	paymentMethod.Type = "payment_methods"
+
+	if err := PaymentMethod(&buffer, paymentMethod); err != nil {
+		t.Fatalf("PaymentMethod returned error: %v", err)
+	}
+
+	if !strings.Contains(buffer.String(), "Expiry: 12/2030") {
+		t.Fatalf("expected expiry in output, got:\n%s", buffer.String())
 	}
 }
 

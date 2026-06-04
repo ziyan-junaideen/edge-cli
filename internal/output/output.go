@@ -328,25 +328,61 @@ func PaymentDemand(writer io.Writer, paymentDemand jsonapi.Resource, document js
 		writer,
 		"ID: %s\n"+
 			"Type: %s\n"+
+			"Description: %s\n"+
 			"Amount: %s\n"+
+			"Discount: %s\n"+
+			"Fee: %s\n"+
 			"State: %s\n"+
 			"Processor State: %s\n"+
 			"Capture Method: %s\n"+
+			"Purchase Reference: %s\n"+
+			"Purchase Kind: %s\n"+
+			"Payer Timezone: %s\n"+
+			"Idempotency Key: %s\n"+
 			"Email Receipt: %s\n"+
+			"CVC2 Check: %s\n"+
+			"Address Line 1 Verification: %s\n"+
+			"Postal Code Verification: %s\n"+
+			"3DS Version: %s\n"+
+			"3DS Status: %s\n"+
+			"3DS Cryptogram: %s\n"+
+			"ECI: %s\n"+
+			"Directory Transaction EID: %s\n"+
+			"ACS Transaction EID: %s\n"+
 			"Succeeded At: %s\n"+
 			"Created: %s\n"+
 			"Updated: %s\n",
 		paymentDemand.ID,
 		paymentDemand.Type,
+		attributeString(paymentDemand, "description"),
 		moneyString(paymentDemand, "amount_cents", "amount_currency"),
+		moneyAttributeString(paymentDemand, "discount_cents", "amount_currency"),
+		moneyAttributeString(paymentDemand, "fee_cents", "amount_currency"),
 		firstAttributeString(paymentDemand, "state", "status"),
 		attributeString(paymentDemand, "processor_state"),
 		attributeString(paymentDemand, "capture_method"),
+		attributeString(paymentDemand, "purchase_reference"),
+		attributeString(paymentDemand, "purchase_kind"),
+		attributeString(paymentDemand, "payer_timezone"),
+		attributeString(paymentDemand, "idempotency_key"),
 		attributeString(paymentDemand, "email_receipt"),
+		attributeString(paymentDemand, "cvc2_check"),
+		attributeString(paymentDemand, "address_line1_verification"),
+		attributeString(paymentDemand, "postal_code_verification"),
+		attributeString(paymentDemand, "threeds_version"),
+		attributeString(paymentDemand, "threeds_status"),
+		attributeString(paymentDemand, "threeds_cryptogram"),
+		attributeString(paymentDemand, "eci"),
+		attributeString(paymentDemand, "directory_transaction_eid"),
+		attributeString(paymentDemand, "acs_transaction_eid"),
 		attributeString(paymentDemand, "succeeded_at"),
 		attributeString(paymentDemand, "created_at"),
 		attributeString(paymentDemand, "updated_at"),
 	); err != nil {
+		return err
+	}
+
+	if err := LineItems(writer, paymentDemand); err != nil {
 		return err
 	}
 
@@ -440,6 +476,7 @@ func PaymentSubscription(writer io.Writer, paymentSubscription jsonapi.Resource,
 }
 
 func PaymentMethod(writer io.Writer, paymentMethod jsonapi.Resource) error {
+	expiry := expiryString(paymentMethod)
 	_, err := fmt.Fprintf(
 		writer,
 		"ID: %s\n"+
@@ -449,7 +486,9 @@ func PaymentMethod(writer io.Writer, paymentMethod jsonapi.Resource) error {
 			"Description: %s\n"+
 			"BIN: %s\n"+
 			"Last Four: %s\n"+
-			"Expiry: %s/%s\n"+
+			"Card PAN Token: %s\n"+
+			"Card CVV Token: %s\n"+
+			"Expiry: %s\n"+
 			"External State: %s\n"+
 			"Discarded At: %s\n"+
 			"Created: %s\n"+
@@ -461,8 +500,9 @@ func PaymentMethod(writer io.Writer, paymentMethod jsonapi.Resource) error {
 		attributeString(paymentMethod, "description"),
 		attributeString(paymentMethod, "card_bin"),
 		attributeString(paymentMethod, "last_four"),
-		attributeString(paymentMethod, "expiry_month"),
-		attributeString(paymentMethod, "expiry_year"),
+		attributeString(paymentMethod, "card_pan_token"),
+		attributeString(paymentMethod, "card_cvv_token"),
+		expiry,
 		attributeString(paymentMethod, "external_state"),
 		attributeString(paymentMethod, "discarded_at"),
 		attributeString(paymentMethod, "created_at"),
@@ -590,6 +630,21 @@ func firstAttributeString(resource jsonapi.Resource, names ...string) string {
 	return ""
 }
 
+func expiryString(resource jsonapi.Resource) string {
+	expiryMonth := attributeString(resource, "expiry_month")
+	expiryYear := attributeString(resource, "expiry_year")
+	if expiryMonth == "" && expiryYear == "" {
+		return ""
+	}
+	if expiryMonth == "" {
+		return expiryYear
+	}
+	if expiryYear == "" {
+		return expiryMonth
+	}
+	return expiryMonth + "/" + expiryYear
+}
+
 func LineItems(writer io.Writer, resource jsonapi.Resource) error {
 	rawLineItems, ok := resource.Attributes["line_items"]
 	if !ok || len(rawLineItems) == 0 || string(rawLineItems) == "null" {
@@ -675,20 +730,13 @@ func RelationshipIdentifiers(writer io.Writer, resource jsonapi.Resource) error 
 		return nil
 	}
 
-	table := tabwriter.NewWriter(writer, 0, 0, 2, ' ', 0)
-	if _, err := fmt.Fprintln(writer, "\nRelationships:"); err != nil {
-		return err
-	}
-	if _, err := fmt.Fprintln(table, "RELATION\tRESOURCE"); err != nil {
-		return err
-	}
-
 	relationshipNames := make([]string, 0, len(resource.Relationships))
 	for relationshipName := range resource.Relationships {
 		relationshipNames = append(relationshipNames, relationshipName)
 	}
 	sort.Strings(relationshipNames)
 
+	rows := [][2]string{}
 	for _, relationshipName := range relationshipNames {
 		rawRelationship := resource.Relationships[relationshipName]
 		relationship, err := jsonapi.DecodeRelationship(rawRelationship)
@@ -708,12 +756,26 @@ func RelationshipIdentifiers(writer io.Writer, resource jsonapi.Resource) error 
 			if index == 0 {
 				relationLabel = titleize(relationshipName)
 			}
-			if _, err := fmt.Fprintf(table, "%s\t%s %s\n", relationLabel, identifier.Type, identifier.ID); err != nil {
-				return err
-			}
+			rows = append(rows, [2]string{relationLabel, identifier.Type + " " + identifier.ID})
 		}
 	}
 
+	if len(rows) == 0 {
+		return nil
+	}
+
+	if _, err := fmt.Fprintln(writer, "\nRelationships:"); err != nil {
+		return err
+	}
+	table := tabwriter.NewWriter(writer, 0, 0, 2, ' ', 0)
+	if _, err := fmt.Fprintln(table, "RELATION\tRESOURCE"); err != nil {
+		return err
+	}
+	for _, row := range rows {
+		if _, err := fmt.Fprintf(table, "%s\t%s\n", row[0], row[1]); err != nil {
+			return err
+		}
+	}
 	return table.Flush()
 }
 
