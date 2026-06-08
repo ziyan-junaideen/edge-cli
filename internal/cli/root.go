@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/edgepayments/ept-cli/internal/config"
+	"github.com/ziyan-junaideen/edge-cli/internal/config"
 	"github.com/spf13/cobra"
 )
+
+var version = "dev"
 
 type globalOptions struct {
 	profileName        string
@@ -23,6 +25,7 @@ func NewRootCommand() *cobra.Command {
 	rootCommand := &cobra.Command{
 		Use:           "edge",
 		Short:         "Edge Payment Technologies command line client",
+		Version:       version,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}

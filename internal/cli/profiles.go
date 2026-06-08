@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/edgepayments/ept-cli/internal/config"
-	"github.com/edgepayments/ept-cli/internal/output"
+	"github.com/ziyan-junaideen/edge-cli/internal/config"
+	"github.com/ziyan-junaideen/edge-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 

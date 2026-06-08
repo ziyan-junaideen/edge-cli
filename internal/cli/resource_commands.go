@@ -3,9 +3,9 @@ package cli
 import (
 	"context"
 
-	"github.com/edgepayments/ept-cli/internal/edgeapi"
-	"github.com/edgepayments/ept-cli/internal/jsonapi"
-	"github.com/edgepayments/ept-cli/internal/output"
+	"github.com/ziyan-junaideen/edge-cli/internal/edgeapi"
+	"github.com/ziyan-junaideen/edge-cli/internal/jsonapi"
+	"github.com/ziyan-junaideen/edge-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 

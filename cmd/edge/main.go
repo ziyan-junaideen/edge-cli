@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/edgepayments/ept-cli/internal/cli"
+	"github.com/ziyan-junaideen/edge-cli/internal/cli"
 )
 
 func main() {

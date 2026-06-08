@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/edgepayments/ept-cli/internal/secrets"
+	"github.com/ziyan-junaideen/edge-cli/internal/secrets"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )

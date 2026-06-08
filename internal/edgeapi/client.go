@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/edgepayments/ept-cli/internal/jsonapi"
+	"github.com/ziyan-junaideen/edge-cli/internal/jsonapi"
 )
 
 type Client struct {

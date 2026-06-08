@@ -4,9 +4,9 @@ import (
 	"errors"
 	"os"
 
-	"github.com/edgepayments/ept-cli/internal/config"
-	"github.com/edgepayments/ept-cli/internal/edgeapi"
-	"github.com/edgepayments/ept-cli/internal/secrets"
+	"github.com/ziyan-junaideen/edge-cli/internal/config"
+	"github.com/ziyan-junaideen/edge-cli/internal/edgeapi"
+	"github.com/ziyan-junaideen/edge-cli/internal/secrets"
 )
 
 func newAPIClient(options *globalOptions) (*edgeapi.Client, config.Runtime, error) {

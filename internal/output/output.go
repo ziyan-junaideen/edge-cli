@@ -9,7 +9,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/edgepayments/ept-cli/internal/jsonapi"
+	"github.com/ziyan-junaideen/edge-cli/internal/jsonapi"
 )
 
 func JSON(writer io.Writer, value any) error {

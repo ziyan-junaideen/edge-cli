@@ -1,4 +1,4 @@
-module github.com/edgepayments/ept-cli
+module github.com/ziyan-junaideen/edge-cli
 
 go 1.22
 

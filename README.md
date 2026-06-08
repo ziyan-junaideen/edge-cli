@@ -4,14 +4,26 @@ Go-based command line client for the Edge Payment Technologies JSON:API API.
 
 ## Prerequisite
 
-Install Go 1.22 or newer. The current local machine did not have `go` on `PATH` when this project was scaffolded.
+Install project tools with mise:
+
+```sh
+mise install
+```
+
+## Installation
+
+```sh
+brew tap ziyan-junaideen/tap
+brew install edge-cli
+edge --help
+```
 
 ## Development
 
 ```sh
-go mod tidy
-go test ./...
-go run ./cmd/edge --help
+mise exec -- go mod tidy
+mise exec -- go test ./...
+mise exec -- go run ./cmd/edge --help
 ```
 
 ## Profiles
