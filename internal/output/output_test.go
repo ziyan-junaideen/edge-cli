@@ -44,11 +44,17 @@ func TestPaymentDemandCollectionFormatsAmount(t *testing.T) {
 func TestPaymentDemandShowsExpandedAttributesAndLineItems(t *testing.T) {
 	var buffer bytes.Buffer
 	paymentDemand := resourceWithAttributes(t, map[string]any{
-		"description":                "Test charge",
-		"amount_cents":               10000,
-		"amount_currency":            "USD",
-		"discount_cents":             250,
-		"fee_cents":                  53,
+		"description":     "Test charge",
+		"amount_cents":    10000,
+		"amount_currency": "USD",
+		"discount_cents":  250,
+		"fee_cents":       53,
+		"tax_detail": map[string]any{
+			"tax_cents": 825, "tax_currency": "USD",
+		},
+		"shipping_detail": map[string]any{
+			"shipping_cents": 500, "shipping_currency": "USD",
+		},
 		"processor_state":            "succeeded",
 		"capture_method":             "automatic",
 		"purchase_reference":         "00000001",
@@ -95,6 +101,8 @@ func TestPaymentDemandShowsExpandedAttributesAndLineItems(t *testing.T) {
 		"Amount: 100.00 USD",
 		"Discount: 2.50 USD",
 		"Fee: 0.53 USD",
+		"Tax: 8.25 USD",
+		"Shipping: 5.00 USD",
 		"Purchase Reference: 00000001",
 		"Payer Timezone: Asia/Colombo",
 		"Idempotency Key: idempotency-key",

@@ -75,6 +75,10 @@ edge consumer-addresses show <address-id> --include customer
 
 edge payment-demands list
 edge payment-demands show <payment-demand-id> --include payer,billing_address,payment_method
+edge payment-demands create --amount-cents 11325 --idempotency-key <unique-key> \
+  --purchase-kind order --purchase-reference order-123 \
+  --tax-cents 825 --shipping-cents 500 \
+  --line-item '{"name":"Widget","amount_cents":10000,"amount_currency":"USD","quantity":1}'
 
 edge payment-subscriptions list
 edge payment-subscriptions show <payment-subscription-id> --include payer,payment_method
@@ -108,6 +112,12 @@ edge webhook-deliveries show <webhook-delivery-id> --include event,webhook_subsc
 ```
 
 `--preload` is an alias for JSON:API `--include`. JSON output returns the full JSON:API document, including `included`, `links`, and `meta`.
+
+`payment-demands create` creates an unconfirmed payment intent by default. Add
+`--confirmed` to create and queue a payment demand. The command accepts payment
+settings, purchase details, `tax_detail`, `shipping_detail`, repeatable JSON
+`line_items`, 3DS results, and customer, address, and payment-method relationship
+IDs; run `edge payment-demands create --help` for the complete schema.
 
 ## Replay a webhook delivery
 

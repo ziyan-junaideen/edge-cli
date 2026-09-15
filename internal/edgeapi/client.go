@@ -40,6 +40,64 @@ type QueryOptions struct {
 	Include []string
 }
 
+type PaymentTaxDetail struct {
+	TaxCents    int    `json:"tax_cents"`
+	TaxCurrency string `json:"tax_currency"`
+}
+
+type PaymentShippingDetail struct {
+	ShippingCents    int    `json:"shipping_cents"`
+	ShippingCurrency string `json:"shipping_currency"`
+}
+
+type PaymentLineItem struct {
+	Name             string `json:"name,omitempty"`
+	SKU              string `json:"sku,omitempty"`
+	UnitOfMeasure    string `json:"unit_of_measure,omitempty"`
+	Description      string `json:"description,omitempty"`
+	CommodityCode    string `json:"commodity_code,omitempty"`
+	AmountCents      *int   `json:"amount_cents,omitempty"`
+	AmountCurrency   string `json:"amount_currency"`
+	TaxCents         int    `json:"tax_cents,omitempty"`
+	TaxCurrency      string `json:"tax_currency,omitempty"`
+	DiscountCents    int    `json:"discount_cents,omitempty"`
+	DiscountCurrency string `json:"discount_currency,omitempty"`
+	Quantity         *int   `json:"quantity,omitempty"`
+}
+
+type CreatePaymentDemandAttributes struct {
+	AmountCents             int                    `json:"amount_cents"`
+	AmountCurrency          string                 `json:"amount_currency"`
+	IdempotencyKey          string                 `json:"idempotency_key"`
+	Confirmed               bool                   `json:"confirmed,omitempty"`
+	Description             string                 `json:"description,omitempty"`
+	EmailReceipt            *bool                  `json:"email_receipt,omitempty"`
+	CaptureMethod           string                 `json:"capture_method,omitempty"`
+	DiscountCents           *int                   `json:"discount_cents,omitempty"`
+	PurchaseReference       string                 `json:"purchase_reference,omitempty"`
+	PurchaseKind            string                 `json:"purchase_kind,omitempty"`
+	PayerTimezone           string                 `json:"payer_timezone,omitempty"`
+	ShippingDetail          *PaymentShippingDetail `json:"shipping_detail,omitempty"`
+	TaxDetail               *PaymentTaxDetail      `json:"tax_detail,omitempty"`
+	LineItems               []PaymentLineItem      `json:"line_items,omitempty"`
+	ThreedsVersion          string                 `json:"threeds_version,omitempty"`
+	ThreedsStatus           string                 `json:"threeds_status,omitempty"`
+	ThreedsCryptogram       string                 `json:"threeds_cryptogram,omitempty"`
+	ECI                     string                 `json:"eci,omitempty"`
+	DirectoryTransactionEID string                 `json:"directory_transaction_eid,omitempty"`
+	ACSTransactionEID       string                 `json:"acs_transaction_eid,omitempty"`
+}
+
+type CreatePaymentDemandParams struct {
+	Attributes        CreatePaymentDemandAttributes
+	PaymentMethodID   string
+	BillingAddressID  string
+	ShippingAddressID string
+	PayerID           string
+	BuyerID           string
+	ReceiverID        string
+}
+
 func New(config Config) (*Client, error) {
 	if strings.TrimSpace(config.Token) == "" {
 		return nil, errors.New("api token is required")
@@ -97,6 +155,38 @@ func (client *Client) ListPaymentDemands(ctx context.Context, options QueryOptio
 
 func (client *Client) ShowPaymentDemand(ctx context.Context, paymentDemandID string, options QueryOptions) (jsonapi.Resource, jsonapi.Document, error) {
 	return client.showResource(ctx, "payment_demands", paymentDemandID, options)
+}
+
+func (client *Client) CreatePaymentDemand(ctx context.Context, params CreatePaymentDemandParams, options QueryOptions) (jsonapi.Resource, jsonapi.Document, error) {
+	relationships := map[string]any{}
+	addRelationship := func(name string, resourceType string, id string) {
+		if id != "" {
+			relationships[name] = map[string]any{
+				"data": jsonapi.ResourceIdentifier{ID: id, Type: resourceType},
+			}
+		}
+	}
+
+	addRelationship("payment_method", "payment_methods", params.PaymentMethodID)
+	addRelationship("billing_address", "consumer_addresses", params.BillingAddressID)
+	addRelationship("shipping_address", "consumer_addresses", params.ShippingAddressID)
+	addRelationship("payer", "customers", params.PayerID)
+	addRelationship("buyer", "customers", params.BuyerID)
+	addRelationship("receiver", "customers", params.ReceiverID)
+
+	document, err := client.send(ctx, http.MethodPost, "payment_demands", options, map[string]any{
+		"data": map[string]any{
+			"type":          "payment_demands",
+			"attributes":    params.Attributes,
+			"relationships": relationships,
+		},
+	})
+	if err != nil {
+		return jsonapi.Resource{}, jsonapi.Document{}, err
+	}
+
+	resource, err := jsonapi.DecodeResource(document.Data)
+	return resource, document, err
 }
 
 func (client *Client) ListPaymentSubscriptions(ctx context.Context, options QueryOptions) ([]jsonapi.Resource, jsonapi.Document, error) {
@@ -200,6 +290,10 @@ func (client *Client) showResource(ctx context.Context, path string, resourceID 
 }
 
 func (client *Client) get(ctx context.Context, path string, options QueryOptions) (jsonapi.Document, error) {
+	return client.send(ctx, http.MethodGet, path, options, nil)
+}
+
+func (client *Client) send(ctx context.Context, method string, path string, options QueryOptions, payload any) (jsonapi.Document, error) {
 	requestURL := *client.baseURL
 	requestURL.Path = strings.TrimRight(client.baseURL.Path, "/") + "/" + strings.TrimLeft(path, "/")
 	query := requestURL.Query()
@@ -208,12 +302,24 @@ func (client *Client) get(ctx context.Context, path string, options QueryOptions
 	}
 	requestURL.RawQuery = query.Encode()
 
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL.String(), nil)
+	var requestBody io.Reader
+	if payload != nil {
+		encodedPayload, err := json.Marshal(payload)
+		if err != nil {
+			return jsonapi.Document{}, fmt.Errorf("encode request: %w", err)
+		}
+		requestBody = strings.NewReader(string(encodedPayload))
+	}
+
+	request, err := http.NewRequestWithContext(ctx, method, requestURL.String(), requestBody)
 	if err != nil {
 		return jsonapi.Document{}, err
 	}
 	request.Header.Set("Authorization", "Bearer "+client.token)
 	request.Header.Set("Accept", "application/vnd.api+json")
+	if payload != nil {
+		request.Header.Set("Content-Type", "application/vnd.api+json")
+	}
 
 	response, err := client.httpClient.Do(request)
 	if err != nil {

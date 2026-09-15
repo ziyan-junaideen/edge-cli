@@ -352,6 +352,8 @@ func PaymentDemand(writer io.Writer, paymentDemand jsonapi.Resource, document js
 			"Description: %s\n"+
 			"Amount: %s\n"+
 			"Discount: %s\n"+
+			"Tax: %s\n"+
+			"Shipping: %s\n"+
 			"Fee: %s\n"+
 			"State: %s\n"+
 			"Processor State: %s\n"+
@@ -378,6 +380,8 @@ func PaymentDemand(writer io.Writer, paymentDemand jsonapi.Resource, document js
 		attributeString(paymentDemand, "description"),
 		moneyString(paymentDemand, "amount_cents", "amount_currency"),
 		moneyAttributeString(paymentDemand, "discount_cents", "amount_currency"),
+		embeddedMoneyString(paymentDemand, "tax_detail", "tax_cents", "tax_currency"),
+		embeddedMoneyString(paymentDemand, "shipping_detail", "shipping_cents", "shipping_currency"),
 		moneyAttributeString(paymentDemand, "fee_cents", "amount_currency"),
 		firstAttributeString(paymentDemand, "state", "status"),
 		attributeString(paymentDemand, "processor_state"),
@@ -733,6 +737,19 @@ func rawMoney(values map[string]json.RawMessage, centsAttribute string, currency
 			currencyAttribute: values[currencyAttribute],
 		},
 	}, centsAttribute, currencyAttribute)
+}
+
+func embeddedMoneyString(resource jsonapi.Resource, attribute string, centsAttribute string, currencyAttribute string) string {
+	rawValue, ok := resource.Attributes[attribute]
+	if !ok || len(rawValue) == 0 || string(rawValue) == "null" {
+		return ""
+	}
+
+	var values map[string]json.RawMessage
+	if err := json.Unmarshal(rawValue, &values); err != nil {
+		return ""
+	}
+	return rawMoney(values, centsAttribute, currencyAttribute)
 }
 
 func relationshipNames(includes []string, defaultNames []string) []string {

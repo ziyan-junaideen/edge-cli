@@ -44,6 +44,27 @@ Use `--include` for JSON:API relationships; repeat it or comma-separate values. 
 
 With `--json`, expect the full JSON:API document, including `data`, `included`, `links`, and `meta`; do not assume the output is a bare array or object.
 
+## Create payments
+
+Create an unconfirmed payment intent through the payment-demands endpoint:
+
+```sh
+edge payment-demands create \
+  --amount-cents 11325 \
+  --idempotency-key <unique-key> \
+  --purchase-kind order \
+  --purchase-reference order-123 \
+  --tax-cents 825 \
+  --shipping-cents 500 \
+  --line-item '{"name":"Widget","amount_cents":10000,"amount_currency":"USD","quantity":1}'
+```
+
+Add `--confirmed` only when the user intends to queue the payment for processing.
+The command also supports payer timezone and 3DS result attributes, receipt and
+capture settings, and payer, buyer, receiver, payment-method, billing-address,
+and shipping-address relationship IDs. Run `edge payment-demands create --help`
+for the complete set. Repeat `--line-item` for multiple line items.
+
 ## Replay webhooks locally
 
 Replay an existing delivery to an endpoint reachable from the current machine:
