@@ -169,6 +169,27 @@ func RefundDemandCollection(writer io.Writer, refundDemands []jsonapi.Resource) 
 	return table.Flush()
 }
 
+func WebhookDeliveryCollection(writer io.Writer, webhookDeliveries []jsonapi.Resource) error {
+	table := tabwriter.NewWriter(writer, 0, 0, 2, ' ', 0)
+	if _, err := fmt.Fprintln(table, "ID\tFAILURES\tFIRST TRY\tCREATED\tUPDATED"); err != nil {
+		return err
+	}
+	for _, webhookDelivery := range webhookDeliveries {
+		if _, err := fmt.Fprintf(
+			table,
+			"%s\t%s\t%s\t%s\t%s\n",
+			webhookDelivery.ID,
+			attributeString(webhookDelivery, "fails_count"),
+			attributeString(webhookDelivery, "first_try_at"),
+			attributeString(webhookDelivery, "created_at"),
+			attributeString(webhookDelivery, "updated_at"),
+		); err != nil {
+			return err
+		}
+	}
+	return table.Flush()
+}
+
 func UserResourceCollection(writer io.Writer, resources []jsonapi.Resource) error {
 	table := tabwriter.NewWriter(writer, 0, 0, 2, ' ', 0)
 	if _, err := fmt.Fprintln(table, "ID\tTYPE\tSUMMARY\tSTATUS\tCREATED"); err != nil {

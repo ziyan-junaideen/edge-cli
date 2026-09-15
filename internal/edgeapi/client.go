@@ -171,6 +171,14 @@ func (client *Client) ShowRedFlag(ctx context.Context, redFlagID string, options
 	return client.showResource(ctx, "red_flags", redFlagID, options)
 }
 
+func (client *Client) ListWebhookDeliveries(ctx context.Context, options QueryOptions) ([]jsonapi.Resource, jsonapi.Document, error) {
+	return client.listResources(ctx, "webhook_deliveries", options)
+}
+
+func (client *Client) ShowWebhookDelivery(ctx context.Context, webhookDeliveryID string, options QueryOptions) (jsonapi.Resource, jsonapi.Document, error) {
+	return client.showResource(ctx, "webhook_deliveries", webhookDeliveryID, options)
+}
+
 func (client *Client) listResources(ctx context.Context, path string, options QueryOptions) ([]jsonapi.Resource, jsonapi.Document, error) {
 	document, err := client.get(ctx, path, options)
 	if err != nil {

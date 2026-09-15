@@ -18,6 +18,18 @@ brew install edge-cli
 edge --help
 ```
 
+The Homebrew formula installs the bundled agent skill in `~/.agents/skills`.
+When `~/.claude` exists, it also installs the skill in `~/.claude/skills`. To
+install, refresh, or remove it manually:
+
+```sh
+edge skills install
+edge skills uninstall
+```
+
+Set `EDGE_SKIP_SKILL_INSTALL=1` while installing with Homebrew to skip automatic
+skill installation.
+
 ## Development
 
 ```sh
@@ -90,6 +102,28 @@ edge permissions show <permission-id> --include merchant_tokens
 
 edge red-flags list
 edge red-flags show <red-flag-id> --include merchant
+
+edge webhook-deliveries list
+edge webhook-deliveries show <webhook-delivery-id> --include event,webhook_subscription
 ```
 
 `--preload` is an alias for JSON:API `--include`. JSON output returns the full JSON:API document, including `included`, `links`, and `meta`.
+
+## Replay a webhook delivery
+
+Fetch a production or sandbox webhook delivery and send its event to an endpoint reachable from the local machine:
+
+```sh
+edge webhook-deliveries replay <webhook-delivery-id> \
+  --to http://localhost:4000/webhooks/edge
+```
+
+The CLI retrieves the related event and webhook subscription, reconstructs the delivery payload, and creates a fresh signature using the subscription secret. Version 3 is the default and sends an `Edge-Signature` header. Use `--delivery-version v1` or `--delivery-version v2` only when testing a legacy integration.
+
+Preview the body and generated headers without sending the request:
+
+```sh
+edge webhook-deliveries replay <webhook-delivery-id> \
+  --to http://localhost:4000/webhooks/edge \
+  --dry-run
+```

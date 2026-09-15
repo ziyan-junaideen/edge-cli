@@ -113,6 +113,47 @@ func TestShowPaymentDemandSendsIncludeQuery(t *testing.T) {
 	}
 }
 
+func TestShowWebhookDeliveryRequestsReplayRelationships(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(responseWriter http.ResponseWriter, request *http.Request) {
+		if request.URL.Path != "/v2/webhook_deliveries/delivery-id" {
+			t.Fatalf("expected webhook delivery path, got %q", request.URL.Path)
+		}
+		if request.URL.Query().Get("include") != "event,webhook_subscription" {
+			t.Fatalf("expected replay includes, got %q", request.URL.RawQuery)
+		}
+
+		responseWriter.Header().Set("Content-Type", "application/vnd.api+json")
+		_ = json.NewEncoder(responseWriter).Encode(map[string]any{
+			"data": map[string]any{
+				"id":   "delivery-id",
+				"type": "webhook_deliveries",
+			},
+		})
+	}))
+	defer server.Close()
+
+	client, err := New(Config{
+		APIURL:             server.URL + "/v2",
+		Token:              "test-token",
+		InsecureSkipVerify: true,
+	})
+	if err != nil {
+		t.Fatalf("New returned error: %v", err)
+	}
+
+	delivery, _, err := client.ShowWebhookDelivery(
+		context.Background(),
+		"delivery-id",
+		QueryOptions{Include: []string{"event", "webhook_subscription"}},
+	)
+	if err != nil {
+		t.Fatalf("ShowWebhookDelivery returned error: %v", err)
+	}
+	if delivery.ID != "delivery-id" {
+		t.Fatalf("expected delivery id, got %q", delivery.ID)
+	}
+}
+
 func TestAPIErrorFormatsForbiddenJSONAPIError(t *testing.T) {
 	server := httptest.NewTLSServer(http.HandlerFunc(func(responseWriter http.ResponseWriter, request *http.Request) {
 		responseWriter.WriteHeader(http.StatusForbidden)

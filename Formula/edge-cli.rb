@@ -12,6 +12,10 @@ class EdgeCli < Formula
     system "go", "build", *std_go_args(ldflags: ldflags, output: bin/"edge"), "./cmd/edge"
   end
 
+  def post_install
+    system bin/"edge", "skills", "install" unless ENV["EDGE_SKIP_SKILL_INSTALL"]
+  end
+
   test do
     assert_match version.to_s, shell_output("#{bin}/edge --version")
     assert_match "Edge Payment Technologies", shell_output("#{bin}/edge --help")

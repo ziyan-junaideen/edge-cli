@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ziyan-junaideen/edge-cli/internal/config"
 	"github.com/spf13/cobra"
+	"github.com/ziyan-junaideen/edge-cli/internal/config"
 )
 
 var version = "dev"
@@ -56,6 +56,8 @@ func NewRootCommand() *cobra.Command {
 	rootCommand.AddCommand(newProfilesCommand(options))
 	rootCommand.AddCommand(newRedFlagsCommand(options))
 	rootCommand.AddCommand(newRefundDemandsCommand(options))
+	rootCommand.AddCommand(newSkillsCommand())
+	rootCommand.AddCommand(newWebhookDeliveriesCommand(options))
 
 	rootCommand.SetOut(os.Stdout)
 	rootCommand.SetErr(os.Stderr)

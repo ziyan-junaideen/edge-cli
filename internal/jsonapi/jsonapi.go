@@ -1,6 +1,9 @@
 package jsonapi
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 type Document struct {
 	Data     json.RawMessage `json:"data,omitempty"`
@@ -80,4 +83,41 @@ func DecodeResourceIdentifiers(data json.RawMessage) ([]ResourceIdentifier, erro
 		return nil, err
 	}
 	return []ResourceIdentifier{identifier}, nil
+}
+
+func RelationshipIdentifier(resource Resource, relationshipName string) (ResourceIdentifier, error) {
+	relationshipData, ok := resource.Relationships[relationshipName]
+	if !ok {
+		return ResourceIdentifier{}, fmt.Errorf("relationship %q is missing from %s %s", relationshipName, resource.Type, resource.ID)
+	}
+
+	relationship, err := DecodeRelationship(relationshipData)
+	if err != nil {
+		return ResourceIdentifier{}, fmt.Errorf("decode relationship %q: %w", relationshipName, err)
+	}
+
+	identifiers, err := DecodeResourceIdentifiers(relationship.Data)
+	if err != nil {
+		return ResourceIdentifier{}, fmt.Errorf("decode relationship %q identifier: %w", relationshipName, err)
+	}
+	if len(identifiers) != 1 {
+		return ResourceIdentifier{}, fmt.Errorf("relationship %q must contain one resource", relationshipName)
+	}
+
+	return identifiers[0], nil
+}
+
+func FindIncluded(document Document, identifier ResourceIdentifier) (Resource, error) {
+	includedResources, err := DecodeIncluded(document.Included)
+	if err != nil {
+		return Resource{}, fmt.Errorf("decode included resources: %w", err)
+	}
+
+	for _, resource := range includedResources {
+		if resource.ID == identifier.ID && resource.Type == identifier.Type {
+			return resource, nil
+		}
+	}
+
+	return Resource{}, fmt.Errorf("included %s %s was not returned", identifier.Type, identifier.ID)
 }

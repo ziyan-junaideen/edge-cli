@@ -1,0 +1,4 @@
+interface:
+  display_name: "Edge CLI"
+  short_description: "Operate Edge Payments APIs with the Edge CLI"
+  default_prompt: "Use $edge-cli to work with Edge Payments resources through the CLI."
